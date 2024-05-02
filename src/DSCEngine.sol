@@ -15,9 +15,15 @@ contract DSCEngine is ReentrancyGuard{
   error DSCEngine__TokenAddressessAndPriceFeedAddressesMustBeSameLength(); 
   error DSCEngine__TokenNotAllowed();
   error DSCEngine__TransferFailed();
+  error DSCEngine__BreaksHealthFactor(uint256 healthFactor );
+  error DSCEngine__MintFailed();
 
   uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
   uint256 private constant PRECISION = 1e18;
+  uint256 private constant LIQUIDATION_THRESHOLD = 50;
+  uint256 private constant LIQUIDATION_PRECISION = 100;
+  uint256 private constant MIN_HEALTH_FACTOR = 1;
+
   // state vars
   mapping(address token => address priceFeed) private s_priceFeeds;
   mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
@@ -33,7 +39,7 @@ contract DSCEngine is ReentrancyGuard{
   modifier moreThanZero(uint256 _amount) {
     if (_amount <= 0) {
       revert DSCEngine__AmountMustBeGreaterThanZero();
-    }
+    } 
 
     _;
   }
@@ -95,6 +101,11 @@ contract DSCEngine is ReentrancyGuard{
     //check heatlh
     _revertIfHealthFactorIsBroken(msg.sender);
 
+    bool minted = i_dsc.mint(msg.sender, _amountDSCToMint);
+    if (!minted) {
+      revert DSCEngine__MintFailed();
+    }
+
 
   }
 
@@ -108,15 +119,23 @@ contract DSCEngine is ReentrancyGuard{
     uint256 totalDSCMinted = s_DSCMinted[user];
     uint256 collateralValueInUSD = getAccountCollateralValue(user);
 
+    return (totalDSCMinted, collateralValueInUSD);
+
   }
 
   function _healthFactor(address user) private view returns (uint256) {
     (uint256 totalDSCMinted, uint256 collateralValueInUSD) = 
       _getAccountInformation(user);
+    uint256 collateralAdjustedForThreshold = (collateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION ; 
+    return (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted;
+
   }
 
   function _revertIfHealthFactorIsBroken(address user) internal view {
-
+    uint256 userHealthFactor = _healthFactor(user);
+    if (userHealthFactor < MIN_HEALTH_FACTOR) {
+      revert DSCEngine__BreaksHealthFactor(userHealthFactor);
+    }
   }
 
   //public and external view functions
@@ -126,8 +145,8 @@ contract DSCEngine is ReentrancyGuard{
     for (uint256 i = 0; i < s_collateralTokens.length; i++) {
       address token = s_collateralTokens[i];
       uint256 amount = s_collateralDeposited[user][token];
+      totalValue += getUsdValue(token, amount);
     }
-
     return totalValue;
   }
 
