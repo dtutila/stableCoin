@@ -23,9 +23,15 @@ contract HelperConfig is Script {
 
     }
 
-    NetworkConfig activeNetworkConfig;
+    NetworkConfig public activeNetworkConfig;
 
     constructor () {
+      
+      if (block.chainid == 11_155_111) {
+            activeNetworkConfig = getSepoliaEthConfig();
+        } else {
+            activeNetworkConfig = getOrCreateAnvilEthConfig();
+        }
       
     }
     
@@ -54,7 +60,7 @@ contract HelperConfig is Script {
         vm.stopBroadcast();
 
         anvilNetworkConfig = NetworkConfig({
-            wethUSDPriceFeed: address(ethUsdPriceFeed), // ETH / USD
+            wethUSDPriceFeed: address(ethUsdPriceFeed), 
             weth: address(wethMock),
             wbtcUSDPriceFeed: address(btcUsdPriceFeed),
             wbtc: address(wbtcMock),
