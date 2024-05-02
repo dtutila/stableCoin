@@ -5,8 +5,7 @@ pragma solidity ^0.8.25;
 import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-//import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /// @title DSCEngine 
 contract DSCEngine is ReentrancyGuard{
   
@@ -18,7 +17,7 @@ contract DSCEngine is ReentrancyGuard{
   error DSCEngine__TransferFailed();
 
   // state vars
-  mapping(address token => address priceFeed) private s_priceFeed;
+  mapping(address token => address priceFeed) private s_priceFeeds;
   mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
   mapping (address user => uint256 amountDSCMinted) s_DSCMinted;
   address[] private s_collateralTokens;
@@ -38,7 +37,7 @@ contract DSCEngine is ReentrancyGuard{
   }
 
   modifier isAllowedToken(address token) {
-    if (s_priceFeed[token] == address(0)) {
+    if (s_priceFeeds[token] == address(0)) {
       revert DSCEngine__TokenNotAllowed();
     }
     _;
@@ -56,7 +55,7 @@ contract DSCEngine is ReentrancyGuard{
     i_dsc = DecentralizedStableCoin(_dscAddress);
 
     for (uint256 i = 0; i < _tokenAddresses.length; i++) {
-      s_priceFeed[_tokenAddresses[i]] = _priceFeedAddresses[i];     
+      s_priceFeeds[_tokenAddresses[i]] = _priceFeedAddresses[i];     
       s_collateralTokens.push(_tokenAddresses[i]);
     }
 
@@ -120,7 +119,7 @@ contract DSCEngine is ReentrancyGuard{
 
   //public and external view functions
 
-  function getAccountCollateralValue(address user) public view retruns (uint256) {
+  function getAccountCollateralValue(address user) public view returns (uint256) {
     uint256 totalValue;
     for (uint256 i = 0; i < s_collateralTokens.length; i++) {
       address token = s_collateralTokens[i];
@@ -131,6 +130,7 @@ contract DSCEngine is ReentrancyGuard{
   }
 
   function getUsdValue(address token, uint256 amount) public view returns (uint256) {
-
+    AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+    (, int256 price,,,) = priceFeed.latestRoundData();
   }
 }
