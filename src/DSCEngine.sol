@@ -5,7 +5,8 @@ pragma solidity ^0.8.25;
 import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+//import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /// @title DSCEngine 
 contract DSCEngine is ReentrancyGuard{
   
@@ -14,10 +15,14 @@ contract DSCEngine is ReentrancyGuard{
   error DSCEngine__AmountMustBeGreaterThanZero();
   error DSCEngine__TokenAddressessAndPriceFeedAddressesMustBeSameLength(); 
   error DSCEngine__TokenNotAllowed();
+  error DSCEngine__TransferFailed();
 
   // state vars
   mapping(address token => address priceFeed) private s_priceFeed;
   mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
+  mapping (address user => uint256 amountDSCMinted) s_DSCMinted;
+  address[] private s_collateralTokens;
+
 
   DecentralizedStableCoin private immutable i_dsc;
 
@@ -51,7 +56,8 @@ contract DSCEngine is ReentrancyGuard{
     i_dsc = DecentralizedStableCoin(_dscAddress);
 
     for (uint256 i = 0; i < _tokenAddresses.length; i++) {
-      s_priceFeed[_tokenAddresses[i]] = _priceFeedAddresses[i];      
+      s_priceFeed[_tokenAddresses[i]] = _priceFeedAddresses[i];     
+      s_collateralTokens.push(_tokenAddresses[i]);
     }
 
   }
@@ -71,7 +77,10 @@ contract DSCEngine is ReentrancyGuard{
     s_collateralDeposited[msg.sender][_collateralAddress] += _amount;
     emit DSCEngine__CollateralDeposited(msg.sender, _collateralAddress,_amount);
     
-
+    bool success = IERC20(_collateralAddress).transferFrom(msg.sender, address(this), _amount);
+    if (!success) {
+      revert DSCEngine__TransferFailed();
+    }
     
 
   }
@@ -80,10 +89,48 @@ contract DSCEngine is ReentrancyGuard{
   
   function redeemColateral() external {}
 
-  function mintDSC() external {}
+  function mintDSC(uint256 _amountDSCToMint) external {
+    s_DSCMinted[msg.sender] += _amountDSCToMint;
+    //check heatlh
+    _revertIfHealthFactorIsBroken(msg.sender);
+
+
+  }
+
   function burnDSC() external {}
   function liquidate() external {}
   function healthFactor() external view {}
 
- 
+  //internal functions
+
+  function _getAccountInformation(address user) private view returns (uint256, uint256){
+    uint256 totalDSCMinted = s_DSCMinted[user];
+    uint256 collateralValueInUSD = getAccountCollateralValue(user);
+
+  }
+
+  function _healthFactor(address user) private view returns (uint256) {
+    (uint256 totalDSCMinted, uint256 collateralValueInUSD) = 
+      _getAccountInformation(user);
+  }
+
+  function _revertIfHealthFactorIsBroken(address user) internal view {
+
+  }
+
+  //public and external view functions
+
+  function getAccountCollateralValue(address user) public view retruns (uint256) {
+    uint256 totalValue;
+    for (uint256 i = 0; i < s_collateralTokens.length; i++) {
+      address token = s_collateralTokens[i];
+      uint256 amount = s_collateralDeposited[user][token];
+    }
+
+    return totalValue;
+  }
+
+  function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+
+  }
 }
