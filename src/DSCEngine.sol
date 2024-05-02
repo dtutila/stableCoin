@@ -16,6 +16,8 @@ contract DSCEngine is ReentrancyGuard{
   error DSCEngine__TokenNotAllowed();
   error DSCEngine__TransferFailed();
 
+  uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
+  uint256 private constant PRECISION = 1e18;
   // state vars
   mapping(address token => address priceFeed) private s_priceFeeds;
   mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
@@ -132,5 +134,7 @@ contract DSCEngine is ReentrancyGuard{
   function getUsdValue(address token, uint256 amount) public view returns (uint256) {
     AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
     (, int256 price,,,) = priceFeed.latestRoundData();
+
+    return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION;
   }
 }
