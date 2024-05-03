@@ -51,7 +51,7 @@ contract HelperConfig is Script {
             return activeNetworkConfig;
         }
 
-        vm.startBroadcast();
+        vm.startBroadcast(DEFAULT_ANVIL_PRIVATE_KEY);
         MockV3Aggregator ethUsdPriceFeed = new MockV3Aggregator(DECIMALS, ETH_USD_PRICE);
         ERC20Mock wethMock = new ERC20Mock("WETH", "WETH", msg.sender, 1000e8);
 
@@ -60,9 +60,9 @@ contract HelperConfig is Script {
         vm.stopBroadcast();
 
         anvilNetworkConfig = NetworkConfig({
-            wethUSDPriceFeed: address(ethUsdPriceFeed), 
-            weth: address(wethMock),
+            wethUSDPriceFeed: address(ethUsdPriceFeed),
             wbtcUSDPriceFeed: address(btcUsdPriceFeed),
+            weth: address(wethMock),
             wbtc: address(wbtcMock),
             deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
         });
