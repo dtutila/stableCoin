@@ -138,7 +138,16 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function liquidate() external {}
+    function liquidate(address _collateralAddress,
+                      address _user,
+                      uint256 _debtToCover
+    ) external 
+      moreThanZero(_debtToCover)
+      nonReentrant
+    {
+
+    }
+
     function healthFactor() external view {}
 
     //internal functions

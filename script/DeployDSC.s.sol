@@ -7,34 +7,27 @@ import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
-
 contract DeployDSC is Script {
-  address[] public tokenAddresses;
-  address[] public priceFeedAddresses;
+    address[] public tokenAddresses;
+    address[] public priceFeedAddresses;
 
-  function run() external returns (DecentralizedStableCoin, DSCEngine, HelperConfig) {
-    HelperConfig config = new HelperConfig();
+    function run() external returns (DecentralizedStableCoin, DSCEngine, HelperConfig) {
+        HelperConfig config = new HelperConfig();
 
-    (
-       address wethUSDPriceFeed, 
-       address wbtcUSDPriceFeed,
-       address weth,
-       address wbtc,
-       uint256 deployerKey
-    ) = config.activeNetworkConfig();  
+        (address wethUSDPriceFeed, address wbtcUSDPriceFeed, address weth, address wbtc, uint256 deployerKey) =
+            config.activeNetworkConfig();
 
-    tokenAddresses = [weth, wbtc];
-    priceFeedAddresses = [wethUSDPriceFeed, wbtcUSDPriceFeed];
+        tokenAddresses = [weth, wbtc];
+        priceFeedAddresses = [wethUSDPriceFeed, wbtcUSDPriceFeed];
 
-    vm.startBroadcast(deployerKey);
-    DecentralizedStableCoin dsc = new DecentralizedStableCoin();
-  
-    DSCEngine engine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
+        vm.startBroadcast(deployerKey);
+        DecentralizedStableCoin dsc = new DecentralizedStableCoin();
 
-    dsc.transferOwnership(address(engine));
-    vm.stopBroadcast();
+        DSCEngine engine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
 
-    return (dsc, engine, config);  
-  }
-  
+        dsc.transferOwnership(address(engine));
+        vm.stopBroadcast();
+
+        return (dsc, engine, config);
+    }
 }
