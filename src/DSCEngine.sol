@@ -17,12 +17,13 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFailed();
     error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
     error DSCEngine__MintFailed();
+    error DSCEngine__HealthFactorOK();
 
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
     uint256 private constant LIQUIDATION_THRESHOLD = 50;
     uint256 private constant LIQUIDATION_PRECISION = 100;
-    uint256 private constant MIN_HEALTH_FACTOR = 1;
+    uint256 private constant MIN_HEALTH_FACTOR = 1e18;
 
     // state vars
     mapping(address token => address priceFeed) private s_priceFeeds;
@@ -89,15 +90,11 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    function redeemColateralForDSC(
-      address _collateralAddress,
-      uint256 _amountCollateral,
-      uint256 _amountDSCToBurn
-    ) external 
+    function redeemColateralForDSC(address _collateralAddress, uint256 _amountCollateral, uint256 _amountDSCToBurn)
+        external
     {
-      burnDSC(_amountDSCToBurn);
-      redeemColateral(_collateralAddress, _amountCollateral);
-
+        burnDSC(_amountDSCToBurn);
+        redeemColateral(_collateralAddress, _amountCollateral);    
     }
 
     function redeemColateral(address _collateralAddress, uint256 _amountCollateral)
@@ -138,13 +135,17 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function liquidate(address _collateralAddress,
-                      address _user,
-                      uint256 _debtToCover
-    ) external 
-      moreThanZero(_debtToCover)
-      nonReentrant
+    function liquidate(address _collateralAddress, address _user, uint256 _debtToCover)
+        external
+        moreThanZero(_debtToCover)
+        nonReentrant
     {
+        uint256 initHealthFactor = _healthFactor(_user);
+        if ( MIN_HEALTH_FACTOR < initHealthFactor ) {
+          revert DSCEngine__HealthFactorOK();
+        }
+
+        uint256 tokenAmountFromDebtCovered = getTokenAmountFromUSD(_collateralAddress, _debtToCover);
 
     }
 
@@ -173,6 +174,17 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     //public and external view functions
+
+
+    function getTokenAmountFromUSD(address _collateralAddress, uint256 usdAmountInWei) 
+      public 
+      view  
+      returns (uint256)
+    {
+      AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[_collateralAddress]);
+      (, int256 price,,,) = priceFeed.latestRoundData();
+      return (usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
+    }
 
     function getAccountCollateralValue(address user) public view returns (uint256) {
         uint256 totalValue;
