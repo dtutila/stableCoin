@@ -34,7 +34,9 @@ contract DSCEngine is ReentrancyGuard{
 
   DecentralizedStableCoin private immutable i_dsc;
 
-  event DSCEngine__CollateralDeposited(address indexed user, address token, uint256 amount);
+  event DSCEngine__CollateralDeposited(address indexed user, address indexed token, uint256 amount);
+  event DSCEngine__CollateralRedeemed(address indexed user, address indexed token, uint256 amount );
+
 
   //modifiers
   modifier moreThanZero(uint256 _amount) {
@@ -72,12 +74,20 @@ contract DSCEngine is ReentrancyGuard{
 
 
   //external functions
-  function depositCollateralAndMintDSC() external {}
+  function depositCollateralAndMintDSC(
+    address _collateralAddress,
+    uint256 _amountCollateral,
+    uint256 _amountDSCToMint
+  ) external {
+    depositCollateral(_collateralAddress, _amountCollateral);
+    mintDSC(_amountDSCToMint);
+  
+  }
   
   function depositCollateral(
       address _collateralAddress,
       uint256 _amount) 
-    external 
+    public 
     moreThanZero(_amount) 
     isAllowedToken(_collateralAddress)
     nonReentrant()
@@ -95,9 +105,23 @@ contract DSCEngine is ReentrancyGuard{
   
   function redeemColateralForDSC() external {}
   
-  function redeemColateral() external {}
+  function redeemColateral(
+    address _collateralAddress, 
+    uint256 _amountCollateral
+  ) public moreThanZero(_amountCollateral) nonReentrant() 
+  {
+    s_collateralDeposited[msg.sender][_collateralAddress] -= _amountCollateral;
+    emit DSCEngine__CollateralRedeemed(msg.sender, _collateralAddress, _amountCollateral);
+      
+    bool success = ERC20(_collateralAddress).transfer(msg.sender, _amountCollateral);
+    if (!success) {
+      revert DSCEngine__TransferFailed();
+    }
+    _revertIfHealthFactorIsBroken(msg.sender);  
 
-  function mintDSC(uint256 _amountDSCToMint) external {
+  }
+
+  function mintDSC(uint256 _amountDSCToMint) public {
     s_DSCMinted[msg.sender] += _amountDSCToMint;
     //check heatlh
     _revertIfHealthFactorIsBroken(msg.sender);
