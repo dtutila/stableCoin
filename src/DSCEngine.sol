@@ -225,10 +225,20 @@ contract DSCEngine is ReentrancyGuard {
         return totalValue;
     }
 
-    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+   function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeed.latestRoundData();
 
         return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION;
     }
+    
+    function getAccountInformation(address user)
+        external
+        view
+        returns (uint256 totalDscMinted, uint256 collateralValueInUsd)
+    {
+        return _getAccountInformation(user);
+    }
+
+
 }
