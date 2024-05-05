@@ -143,6 +143,19 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+    function testCanMintWithDepositedCollateral() public depositedCollateralAndMint {
+        uint256 userBalance = dsc.balanceOf(alice);
+        assertEq(userBalance, INITIAL_TOKEN_BALANCE);
+    }
+
+    function testCanMintDsc() public depositedCollateral {
+        vm.prank(alice);
+        engine.mintDSC(INITIAL_TOKEN_BALANCE);
+
+        uint256 userBalance = dsc.balanceOf(alice);
+        assertEq(userBalance, INITIAL_TOKEN_BALANCE);
+    }
+
 
     //hf tests
     
@@ -160,6 +173,32 @@ contract DSCEngineTest is Test {
 
         uint256 userHealthFactor = engine.getHealthFactor(alice);
         assert(userHealthFactor == 0.9 ether);
+    }
+
+    // burn test
+    function testRevertsIfBurnAmountIsZero() public {
+        vm.startPrank(alice);
+        ERC20Mock(weth).approve(address(engine), COLLATERAL_AMOUNT);
+        engine.depositCollateralAndMintDSC(weth, COLLATERAL_AMOUNT, INITIAL_TOKEN_BALANCE);
+        vm.expectRevert(DSCEngine.DSCEngine__AmountMustBeGreaterThanZero.selector);
+        engine.burnDSC(0);
+        vm.stopPrank();
+    }
+
+    function testCantBurnMoreThanUserHas() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        engine.burnDSC(1);
+    }
+
+    function testCanBurnDsc() public depositedCollateralAndMint {
+        vm.startPrank(alice);
+        dsc.approve(address(engine), INITIAL_TOKEN_BALANCE);
+        engine.burnDSC(INITIAL_TOKEN_BALANCE);
+        vm.stopPrank();
+
+        uint256 userBalance = dsc.balanceOf(alice);
+        assertEq(userBalance, 0);
     }
 
 
