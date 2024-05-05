@@ -31,13 +31,22 @@ contract DSCEngineTest is Test {
     address[] private priceFeeAddresses;
 
 
-     modifier depositedCollateral() {
+    modifier depositedCollateral() {
         vm.startPrank(alice);
         ERC20Mock(weth).approve(address(engine), COLLATERAL_AMOUNT);
         engine.depositCollateral(weth, COLLATERAL_AMOUNT);
         vm.stopPrank();
         _;
     }
+    
+    modifier depositedCollateralAndMint() {
+        vm.startPrank(alice);
+        ERC20Mock(weth).approve(address(engine), COLLATERAL_AMOUNT);
+        engine.depositCollateralAndMintDSC(weth, COLLATERAL_AMOUNT, INITIAL_TOKEN_BALANCE);
+        vm.stopPrank();
+        _;
+    }
+
 
 
     function setUp() public {
@@ -133,5 +142,25 @@ contract DSCEngineTest is Test {
         engine.depositCollateralAndMintDSC(weth, COLLATERAL_AMOUNT, amountToMint);
         vm.stopPrank();
     }
+
+
+    //hf tests
+    
+    function testProperlyReportsHealthFactor() public depositedCollateralAndMint {
+        uint256 expectedHealthFactor = 100 ether;
+        uint256 healthFactor = engine.getHealthFactor(alice);
+        
+        assertEq(healthFactor, expectedHealthFactor);
+    }
+
+    function testHealthFactorCanGoBelowOne() public depositedCollateralAndMint {
+        int256 ethUsdUpdatedPrice = 18e8; 
+
+        MockV3Aggregator(ethUSDpriceFeed).updateAnswer(ethUsdUpdatedPrice);
+
+        uint256 userHealthFactor = engine.getHealthFactor(alice);
+        assert(userHealthFactor == 0.9 ether);
+    }
+
 
 }
