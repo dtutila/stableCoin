@@ -149,9 +149,29 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function healthFactor() external view {}
+    function calculateHealthFactor(
+      uint256 totalDSCMinted,
+      uint256 collateralValueInUSD
+    ) external pure 
+    returns (uint256)
+    {
+        return _calculateHealthFactor(totalDSCMinted, collateralValueInUSD);
+    }
 
     //internal functions
+
+    function _calculateHealthFactor(
+        uint256 totalDSCMinted,
+        uint256 collateralValueInUsd
+    )
+        internal
+        pure
+        returns (uint256)
+    {
+        if (totalDSCMinted == 0) return type(uint256).max;
+        uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+        return (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted;
+    }
 
     function _getAccountInformation(address user) private view returns (uint256, uint256) {
         uint256 totalDSCMinted = s_DSCMinted[user];
@@ -162,8 +182,7 @@ contract DSCEngine is ReentrancyGuard {
 
     function _healthFactor(address user) private view returns (uint256) {
         (uint256 totalDSCMinted, uint256 collateralValueInUSD) = _getAccountInformation(user);
-        uint256 collateralAdjustedForThreshold = (collateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
-        return (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted;
+        return _calculateHealthFactor(totalDSCMinted, collateralValueInUSD);
     }
 
     function _revertIfHealthFactorIsBroken(address user) internal view {
@@ -204,6 +223,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
 
+// getters
 
     function getTokenAmountFromUSD(address _collateralAddress, uint256 usdAmountInWei) 
       public 
@@ -238,6 +258,14 @@ contract DSCEngine is ReentrancyGuard {
         returns (uint256 totalDscMinted, uint256 collateralValueInUsd)
     {
         return _getAccountInformation(user);
+    }
+
+    function getPrecision() external pure returns (uint256) {
+        return PRECISION;
+    }
+
+    function getAdditionalFeedPrecision() external pure returns (uint256) {
+        return ADDITIONAL_FEED_PRECISION;
     }
 
 
