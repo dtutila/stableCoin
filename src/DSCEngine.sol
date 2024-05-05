@@ -92,11 +92,14 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    function redeemColateralForDSC(address _collateralAddress, uint256 _amountCollateral, uint256 _amountDSCToBurn)
+    function redeemCollateralForDSC(address _collateralAddress, uint256 _amountCollateral, uint256 _amountDSCToBurn)
         external
+        moreThanZero(_amountCollateral)
+        isAllowedToken(_collateralAddress)
     {
         burnDSC(_amountDSCToBurn);
-        redeemColateral(_collateralAddress, _amountCollateral);    
+        _redeemColateral(_collateralAddress, _amountCollateral, msg.sender, msg.sender);    
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
 
     function redeemColateral(address _collateralAddress, uint256 _amountCollateral)
@@ -108,7 +111,7 @@ contract DSCEngine is ReentrancyGuard {
       _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function mintDSC(uint256 _amountDSCToMint) public {
+    function mintDSC(uint256 _amountDSCToMint) public nonReentrant() {
         s_DSCMinted[msg.sender] += _amountDSCToMint;
         //check heatlh
         _revertIfHealthFactorIsBroken(msg.sender);
