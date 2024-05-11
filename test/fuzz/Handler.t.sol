@@ -29,6 +29,23 @@ contract Handler is Test {
   }
 
 
+  function mintDSC(uint256 amount, uint256 addressSeed) public {
+    vm.assume(usersWithCollateralDeposited.length > 0);
+    address sender = usersWithCollateralDeposited[addressSeed %  usersWithCollateralDeposited.length];
+    (uint256 totalDSCMinted, uint256 collateralValueInUSD) = engine.getAccountInformation(sender);
+    int256 maxDSCToMint = (int256(collateralValueInUSD)/2) - int256(totalDSCMinted);
+    vm.assume(maxDSCToMint > 0);
+    amount = bound(amount, 1, uint256(maxDSCToMint));
+
+    vm.startPrank(sender);
+    engine.mintDSC(amount);
+
+    vm.stopPrank();
+    
+  }
+
+
+
   function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
     ERC20Mock collateral = _getCollateralFromSeed(collateralSeed);
     amountCollateral = bound(amountCollateral, 1, MAX_DEPOSIT_SIZE);
@@ -48,20 +65,20 @@ contract Handler is Test {
     engine.redeemColateral(address(collateral), amountCollateral);
   }
 
-  function mintDSC(uint256 amount, uint256 addressSeed) public {
-    vm.assume(usersWithCollateralDeposited.length > 0);
-    address sender = usersWithCollateralDeposited[addressSeed %  usersWithCollateralDeposited.length];
-    (uint256 totalDSCMinted, uint256 collateralValueInUSD) = engine.getAccountInformation(sender);
-    int256 maxDSCToMint = (int256(collateralValueInUSD)/2) - int256(totalDSCMinted);
-    vm.assume(maxDSCToMint > 0);
-    amount = bound(amount, 0, uint256(maxDSCToMint));
-
-    vm.startPrank(sender);
-    engine.mintDSC(amount);
-
-    vm.stopPrank();
-    
-  }
+  // function mintDSC(uint256 amount, uint256 addressSeed) public {
+  //   vm.assume(usersWithCollateralDeposited.length > 0);
+  //   address sender = usersWithCollateralDeposited[addressSeed %  usersWithCollateralDeposited.length];
+  //   (uint256 totalDSCMinted, uint256 collateralValueInUSD) = engine.getAccountInformation(sender);
+  //   int256 maxDSCToMint = (int256(collateralValueInUSD)/2) - int256(totalDSCMinted);
+  //   vm.assume(maxDSCToMint > 0);
+  //   amount = bound(amount, 0, uint256(maxDSCToMint));
+  //
+  //   vm.startPrank(sender);
+  //   engine.mintDSC(amount);
+  //
+  //   vm.stopPrank();
+  //   
+  // }
 
   //helpers
   
