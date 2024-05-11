@@ -36,8 +36,6 @@ contract InvariantsTest  is StdInvariant, Test {
     uint256 wbtcValue = engine.getUsdValue(wbtc, totalWbtcDeposited);
 
     assert(wethValue + wbtcValue >= totalSupply);
-
-
-
   }
+
 }
